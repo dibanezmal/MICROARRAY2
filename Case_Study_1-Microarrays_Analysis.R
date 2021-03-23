@@ -66,7 +66,10 @@ knitr::kable(
 ## BiocManager::install("org.Mm.eg.db")
 ## BiocManager::install("ReactomePA")
 ## BiocManager::install("reactome.db")
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
 
+BiocManager::install("oligo")
 
 ## ----ReadCELfiles, message=FALSE, results='hide', warning=FALSE------------------------------------
 library(oligo)

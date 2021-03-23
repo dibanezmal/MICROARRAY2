@@ -1,0 +1,132 @@
+---
+title: "MICROARRAY GSE100924 study"
+author: "Dani Ibañez"
+date: "19/3/2021"
+output:
+  html_document: default
+  word_document: default
+---
+
+
+```{r setup}
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, 
+                      comment = NA, prompt = TRUE, tidy = FALSE, 
+                      fig.width = 7, fig.height = 7, fig_caption = TRUE,
+                      cache=FALSE)
+#Sys.setlocale("LC_TIME", "C")
+```
+
+
+#```{r setting directories}
+#setwd(".")
+#dir.create("data")
+#dir.create("results")
+#```
+
+```{r lectura archivos}
+
+targets <- read.csv2("c:/MASTER/GITLOCAL/MICROARRAY2/data/targets.csv", header = TRUE, sep = ";") 
+knitr::kable(targets, booktabs = TRUE, caption = 'Content of the targets file used for the current analysis')
+
+```
+
+
+```{r carga de packetes}
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+     install.packages("BiocManager")
+BiocManager::install()
+
+if(!(require(knitr))) install.packages("knitr")
+if(!(require(colorspace))) install.packages("colorspace")
+if(!(require(gplots))) install.packages("gplots")
+if(!(require(ggplot2))) install.packages("ggplot2")
+if(!(require(ggrepel))) install.packages("ggrepel")
+if(!(require(htmlTable))) install.packages("htmlTable")
+if(!(require(prettydoc))) install.packages("prettydoc")
+if(!(require(devtools))) install.packages("devtools")
+if(!(require(BiocManager))) install.packages("BiocManager")
+
+#install.packages("Rtools")
+#install.packages("knitr")
+#install.packages("colorspace")
+#install.packages("gplots")
+#install.packages("ggplot2")
+#install.packages("ggrepel")
+#install.packages("htmlTable")
+#install.packages("prettydoc")
+#install.packages("devtools")
+#install.packages("BiocManager")
+#BiocManager::install("oligo")
+#BiocManager::install("pd.mogene.2.1.st")
+#BiocManager::install("arrayQualityMetrics")
+#BiocManager::install("pvca")
+
+# NOT NEEDED UNTIL ANALYSES ARE PERFORMED
+# BiocManager::install("limma")
+# BiocManager::install("genefilter")
+# BiocManager::install("mogene21sttranscriptcluster.db")
+# BiocManager::install("annotate")
+# BiocManager::install("org.Mm.eg.db")
+# BiocManager::install("ReactomePA")
+# BiocManager::install("reactome.db")
+
+```
+
+```{r carga de datos de las muestras en bruto}
+
+library(oligo)
+celFiles <- list.celfiles("c:/MASTER/GITLOCAL/MICROARRAY2/data", full.names = TRUE)
+library(Biobase)
+my.targets <-read.AnnotatedDataFrame(file.path("c:/MASTER/GITLOCAL/MICROARRAY2/data","targets.csv"), 
+                                      header = TRUE, row.names = 1, 
+                                      sep=";") 
+brut_Data <- read.celfiles(celFiles, phenoData = my.targets)
+class(brut_Data)
+```
+
+
+
+```{r trabajando con el expresionSet}
+
+my.targets@data$ShortName->rownames(pData(brut_Data))
+
+colnames(brut_Data) <-rownames(pData(brut_Data)) 
+ 
+head(brut_Data)
+```
+
+
+```{r control de calidad de los datos en bruto}
+
+library(arrayQualityMetrics)
+arrayQualityMetrics(brut_Data, force=TRUE)
+```
+
+```{r graficando posibles singularidades o errores}
+
+library(ggplot2)
+library(ggrepel)
+plotPCA3 <- function (datos, labels, factor, title, scale,colores, size = 1.5, glineas = 0.25) {
+   data <- prcomp(t(datos),scale=scale)
+   # plot adjustments
+   dataDf <- data.frame(data$x)
+   Group <- factor
+   loads <- round(data$sdev^2/sum(data$sdev^2)*100,1)
+   # main plot
+   p1 <- ggplot(dataDf,aes(x=PC1, y=PC2)) +
+     theme_classic() +
+     geom_hline(yintercept = 0, color = "gray70") +
+     geom_vline(xintercept = 0, color = "gray70") +
+     geom_point(aes(color = Group), alpha = 0.55, size = 3) +
+     coord_cartesian(xlim = c(min(data$x[,1])-5,max(data$x[,1])+5)) +
+     scale_fill_discrete(name = "Group")
+   # avoiding labels superposition
+   p1 + geom_text_repel(aes(y = PC2 + 0.25, label = labels),segment.size = 0.25, size = size) + 
+     labs(x = c(paste("PC1",loads[1],"%")),y=c(paste("PC2",loads[2],"%"))) +  
+     ggtitle(paste("Principal Component Analysis for: ",title,sep=" "))+ 
+     theme(plot.title = element_text(hjust = 0.5)) +
+     scale_color_manual(values=colores)
+   }
+```
